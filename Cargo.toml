@@ -5,5 +5,8 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3.0", features = ["derive"] }
+indicatif = "*"
+rust-htslib = "*"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
+
