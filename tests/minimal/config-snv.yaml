@@ -2,8 +2,8 @@ small_vars:
   - chromosome: chrom
     start: 1000
     end: 1000
-    reference: A
-    alternative: G
+    reference: G
+    alternative: A
     aaf: 0.5
 
 svs: []
