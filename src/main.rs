@@ -1,76 +1,14 @@
-#![allow(unused)]
-
-use std::str;
-use std::{fs::File, io::Read};
+/// Main module for espike app
+///
+/// Responsible for parsing command line parameters and global setup/cleanup.
+mod conf;
 
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use rust_htslib::{
     bam,
-    bam::{HeaderView, Read as BamRead},
+    bam::{HeaderView, Read as BamRead, Record},
 };
-use serde::{Deserialize, Serialize};
-
-/// Specify spike-in of a small variant
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct SmallVarSpec {
-    /// Chromosome as in BAM file
-    chromosome: String,
-    /// 1-based start position
-    start: i32,
-    /// 1-based end position
-    end: i32,
-    /// Reference bases
-    reference: String,
-    /// Alternative bases
-    alternative: String,
-    /// Alternate allele fraction
-    aaf: f64,
-}
-
-/// Define type for a structural variant
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum SvType {
-    /// A deletion (drop in coverage, discordant reads, split reads)
-    Deletion,
-}
-
-/// Specify spike-in of a structural variant
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct StrucVarSpec {
-    /// The type of the structural variant
-    sv_type: SvType,
-    /// Chromosome as in BAM file
-    chromosome: String,
-    /// 1-based start position
-    start: i32,
-    /// 1-based end position
-    end: i32,
-    /// Specify alternate allele fraction
-    aaf: f64,
-}
-
-/// Instructions for spike-ins
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Instructions {
-    /// Small variants to spike in
-    small_vars: Vec<SmallVarSpec>,
-    /// Structural variants to spike in
-    svs: Vec<StrucVarSpec>,
-}
-
-/// Overall configuration of espike
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Config {
-    /// Path to the FAI indexed FASTA reference file
-    path_reference: std::path::PathBuf,
-    /// Path to the input BAM file
-    path_bam_in: std::path::PathBuf,
-    /// Path to the output BAM file
-    path_bam_out: std::path::PathBuf,
-    /// Simulation instructions
-    instructions: Instructions,
-}
 
 /// Spike variants into BAM files
 #[derive(Parser)]
@@ -89,64 +27,55 @@ struct Cli {
     path_bam_out: std::path::PathBuf,
 }
 
-/// Load instructions from the YAML `file` at the given path.
-fn load_instructions(file: &std::path::PathBuf) -> Instructions {
-    let mut file = File::open(file).expect("Unable to open file");
-    let mut contents = String::new();
-
-    file.read_to_string(&mut contents)
-        .expect("Unable to read file");
-
-    let result: Instructions =
-        serde_yaml::from_str(&contents).expect("Unable to parse file contents");
-    result
-}
-
+/// Entry point after parsing command line and reading configuration.
 fn run(config: &Config) {
     // Initialize BAM reader and writer
     let mut bam_in = bam::IndexedReader::from_path(config.path_bam_in.clone()).unwrap();
-    bam_in.set_threads(2);
+    bam_in.set_threads(2).expect("Could not set thread count");
     let header = bam::Header::from_template(bam_in.header());
     let mut bam_out =
         bam::Writer::from_path(config.path_bam_out.clone(), &header, bam::Format::Bam).unwrap();
-    bam_out.set_threads(2);
+    bam_out.set_threads(2).expect("Could not set thread count");
 
     let header_view = HeaderView::from_header(&header);
-    for tid in (0..(header_view.target_count() - 1)) {
-        if (tid != 4) {
+    for tid in 0..(header_view.target_count() - 1) {
+        if tid != 4 {
             continue; // TODO: for testing only
         }
         let target_name = header_view.tid2name(tid);
+        let target_name = String::from_utf8_lossy(&target_name).into_owned();
         let target_len = header_view.target_len(tid).expect("Invalid target");
         bam_in.fetch(tid).expect("Could not fetch contig");
-
-        println!(
-            "Processing contig {:?} ({})",
-            str::from_utf8(&target_name).unwrap(),
-            tid
-        );
 
         let bar = ProgressBar::new(target_len);
         bar.set_style(
             ProgressStyle::default_bar()
                 .template(
-                    "[{elapsed_precise}/{eta_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+                    "contig {msg} | {wide_bar:.cyan/blue} {pos:>7}/{len:7} [{elapsed_precise}/{eta_precise}]",
                 )
                 .progress_chars("##-"),
         );
+        bar.set_message(target_name.clone());
 
         // Iterate over input file, write to output file
-        for r in bam_in.records() {
-            let record = r.unwrap();
+        let mut record = Record::new();
+        let mut record_no = 0u64;
+        while let Some(r) = bam_in.read(&mut record) {
+            r.expect("Failed to parse record");
             let record_pos = record.pos();
-            bar.set_position(record_pos.try_into().unwrap());
             if record.is_reverse() {
                 bam_out.write(&record).unwrap();
             }
+            record_no += 1;
+            if record_no % 10_000 == 0 {
+                bar.set_position(record_pos.try_into().unwrap());
+            }
         }
-        bar.set_position(target_len);
+        bar.finish()
     }
 }
+
+use conf::{load_instructions, Config};
 
 fn main() {
     let args = Cli::parse();
