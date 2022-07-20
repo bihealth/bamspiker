@@ -1,9 +1,6 @@
 /// Helper functions
 use super::conf::VarSpec;
 
-use std::io;
-use std::io::prelude::*;
-
 /// Return whether two intervals overlap.
 fn coords_overlap(x1: i64, x2: i64, y1: i64, y2: i64) -> bool {
     x1 < y2 && y1 < x2
@@ -17,6 +14,15 @@ pub fn var_spec_overlaps(
 ) -> bool {
     itv_contig.eq(&var_spec.chromosome)
         && coords_overlap(itv_begin, itv_end, var_spec.start - 1, var_spec.end)
+}
+
+pub fn var_spec_contains(
+    var_spec: &VarSpec,
+    itv_contig: &str,
+    itv_begin: i64,
+    itv_end: i64,
+) -> bool {
+    itv_contig.eq(&var_spec.chromosome) && itv_begin > var_spec.start && itv_end <= var_spec.end
 }
 
 #[cfg(test)]
@@ -72,14 +78,17 @@ mod tests {
     }
 }
 
-pub fn pause() {
-    let mut stdin = io::stdin();
-    let mut stdout = io::stdout();
+// use std::io;
+// use std::io::prelude::*;
 
-    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
-    write!(stdout, "Press any key to continue...").unwrap();
-    stdout.flush().unwrap();
+// pub fn pause() {
+//     let mut stdin = io::stdin();
+//     let mut stdout = io::stdout();
 
-    // Read a single byte and discard
-    let _ = stdin.read(&mut [0u8]).unwrap();
-}
+//     // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
+//     write!(stdout, "Press any key to continue...").unwrap();
+//     stdout.flush().unwrap();
+
+//     // Read a single byte and discard
+//     let _ = stdin.read(&mut [0u8]).unwrap();
+// }

@@ -1,0 +1,6 @@
+var_specs:
+  - var_type: Deletion
+    chromosome: chrom
+    start: 1000
+    end: 2000
+    aaf: 0.5

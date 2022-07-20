@@ -1,12 +1,25 @@
 # espike
 Spike variants into BAM files (without all the hassle)
 
-## Running
+## Running SNV Example
 
 ```
 $ rm -f out-reads.bam*
 $ cargo run -- \
     tests/minimal/config-snv.yaml \
+    tests/minimal/ref.fa \
+    tests/minimal/reads.bam \
+    out-reads.bam
+$ samtools index out-reads.bam
+$ samtools tview -p chrom:1000 out-reads.bam tests/minimal/ref.fa
+```
+
+## Running Deletion Example
+
+```
+$ rm -f out-reads.bam*
+$ cargo run -- \
+    tests/minimal/config-del.yaml \
     tests/minimal/ref.fa \
     tests/minimal/reads.bam \
     out-reads.bam
