@@ -96,7 +96,7 @@ fn collect_reads_snv(
     let target_name =
         String::from_utf8_lossy(bam_in.header().target_names()[tid as usize]).into_owned();
 
-    println!("SNV {:?} - single pass", &spec);
+    // println!("SNV {:?} - single pass", &spec);
     bam_in
         .fetch((tid, spec.start - 1 - REF_WINDOW, spec.end + REF_WINDOW))
         .expect("could not fetch region from BAM");
@@ -137,7 +137,7 @@ fn collect_reads_snv(
                 "1"
             };
             let qname = String::from_utf8_lossy(record.qname());
-            println!("denied written: {} {}", &qname, flag.eq("2"));
+            // println!("denied written: {} {}", &qname, flag.eq("2"));
             writeln!(denylist_file, "{} {}", qname, &flag).expect("could not write to denylist");
         }
     }
@@ -175,10 +175,10 @@ fn collect_reads_deletion(
     rng: &mut StdRng,
     fasta: &mut IndexedReader<File>,
 ) {
-    println!("Deletion {:?} - stream over region", &spec);
+    // println!("Deletion {:?} - stream over region", &spec);
     let selected_records =
         collect_reads_deletion_stream_region(bam_in, tid, spec, rng, denylist_file);
-    println!("Deletion {:?} - spike-in variants", &spec);
+    // println!("Deletion {:?} - spike-in variants", &spec);
     collect_reads_deletion_spike_in(
         bam_in,
         tid,
@@ -227,10 +227,10 @@ fn collect_reads_deletion_stream_region(
             Ordering::Greater => (record.pos(), record.pos() + record.insert_size()),
             Ordering::Equal => (record.pos(), record.cigar().end_pos()),
         };
-        let qname = String::from_utf8_lossy(record.qname())
-            .to_owned()
-            .to_string();
-        println!("tpl_range = {:?}, qname {}", &tpl_range, &qname);
+        // let qname = String::from_utf8_lossy(record.qname())
+        //     .to_owned()
+        //     .to_string();
+        // println!("tpl_range = {:?}, qname {}", &tpl_range, &qname);
 
         // We only consider properly aligned pairs for mutation
         if !record.is_unmapped()
@@ -239,7 +239,7 @@ fn collect_reads_deletion_stream_region(
             && record.insert_size() != 0
         {
             if var_spec_contains(spec, &target_name, tpl_range.0, tpl_range.1) {
-                println!(" -- case contains");
+                // println!(" -- case contains");
                 // Step (1b): proper pair, full contained in deletion.  For the first aligning mate
                 // qname to deny list file with probability of `spec.aaf`.
                 if record.insert_size() > 0 {
@@ -247,7 +247,7 @@ fn collect_reads_deletion_stream_region(
                     maybe_ignore(rng, spec, &record, denylist_file);
                 }
             } else if var_spec_overlaps(spec, &target_name, tpl_range.0, tpl_range.1) {
-                println!(" -- case overlap");
+                // println!(" -- case overlap");
                 // Step (1a): proper pair, not full contained in deletion but overlaps, collect
                 // reads for manipulation with probability of `spec.aaf`.
                 let qname = String::from_utf8_lossy(record.qname())
@@ -269,7 +269,7 @@ fn collect_reads_deletion_stream_region(
                     };
                     if good_overhang && maybe_ignore(rng, spec, &record, denylist_file) {
                         let key = (qname, record.insert_size() < 0);
-                        println!("inserting 1st {:?}", &key);
+                        // println!("inserting 1st {:?}", &key);
                         result.insert(key, record.clone());
                     }
                 } else {
@@ -278,7 +278,7 @@ fn collect_reads_deletion_stream_region(
                     let other_key = (qname, record.insert_size() > 0);
                     if result.contains_key(&other_key) {
                         let key = (other_key.0, record.insert_size() < 0);
-                        println!("inserting 2nd {:?}", &key);
+                        // println!("inserting 2nd {:?}", &key);
                         result.insert(key, record.clone());
                     }
                 }
@@ -301,8 +301,8 @@ fn maybe_ignore(
     let y: f64 = rng.gen();
     if y <= spec.aaf {
         let qname = String::from_utf8_lossy(record.qname());
-        println!("denied written: {} 1", &qname);
-        println!("denied written: {} 2", &qname);
+        // println!("denied written: {} 1", &qname);
+        // println!("denied written: {} 2", &qname);
         writeln!(denylist_file, "{} 1\n{} 2", &qname, &qname).expect("could not write to denylist");
         true
     } else {
@@ -459,9 +459,9 @@ fn collect_reads_deletion_spike_in(
             second.set_mpos(first.pos());
 
             // Assign complex data fields
-            println!("qname = {}", &qname);
-            println!("  first  spec = {:?}", first_spec);
-            println!("  ssecond spec = {:?}", second_spec);
+            // println!("qname = {}", &qname);
+            // println!("  first  spec = {:?}", first_spec);
+            // println!("  ssecond spec = {:?}", second_spec);
             apply_specs(first_spec, fasta, &target_name, &mut first, rng);
             apply_specs(second_spec, fasta, &target_name, &mut second, rng);
 
@@ -641,7 +641,7 @@ fn second_pass(
         for line in io::BufReader::new(file).lines() {
             let line = line.expect("reading line failed");
             let (qname, flag) = line.rsplit_once(' ').unwrap();
-            println!("denied loaded: {} {}", &qname, flag.eq("2"));
+            // println!("denied loaded: {} {}", &qname, flag.eq("2"));
             deny_qnames.insert((qname.to_owned(), flag.eq("2")));
         }
         deny_qnames
@@ -681,11 +681,11 @@ fn second_pass(
 
         // Merge from temporary file if the records fit
         while next_tmp && record_tmp.pos() >= prev_pos && record_tmp.pos() <= record.pos() {
-            println!(
-                "from tmp        {} {}",
-                String::from_utf8_lossy(record_tmp.qname()),
-                record.is_last_in_template()
-            );
+            // println!(
+            //     "from tmp        {} {}",
+            //     String::from_utf8_lossy(record_tmp.qname()),
+            //     record.is_last_in_template()
+            // );
             bam_out.write(&record_tmp).unwrap();
 
             if let Some(r) = bam_tmp.read(&mut record_tmp) {
@@ -699,18 +699,18 @@ fn second_pass(
         let qname = String::from_utf8_lossy(record.qname()).into_owned();
         let key = (qname, record.is_last_in_template());
         if !deny_qnames.contains(&key) {
-            println!(
-                "allowed writing {} {}",
-                &key.0,
-                record.is_last_in_template()
-            );
+            // println!(
+            //     "allowed writing {} {}",
+            //     &key.0,
+            //     record.is_last_in_template()
+            // );
             bam_out.write(&record).unwrap();
         } else {
-            println!(
-                "denied writing  {} {}",
-                &key.0,
-                record.is_last_in_template()
-            );
+            // println!(
+            //     "denied writing  {} {}",
+            //     &key.0,
+            //     record.is_last_in_template()
+            // );
         }
 
         prev_pos = record.pos();
@@ -756,7 +756,7 @@ fn run(config: &Config) {
 
         // Sort temporary read file by coordinate (need to convert to BAM, samtools sort does not write
         // header to SAM file)
-        println!("sort reads by coordinate");
+        // println!("sort reads by coordinate");
         let path_changed = tmp_dir
             .path()
             .join("changed.sam")
@@ -769,13 +769,13 @@ fn run(config: &Config) {
             .into_os_string()
             .into_string()
             .unwrap();
-        let call = format!("samtools sort -OBAM -o {} {}", &path_sorted, &path_changed);
-        println!("Executing {}", &call);
-        let status = Command::new("samtools")
+        // let call = format!("samtools sort -OBAM -o {} {}", &path_sorted, &path_changed);
+        // println!("Executing {}", &call);
+        let _status = Command::new("samtools")
             .args(["sort", "-OBAM", "-o", &path_sorted, &path_changed])
             .status()
             .expect("samtools call failed");
-        println!("-> result = {:?}", &status);
+        // println!("-> result = {:?}", &status);
 
         // pause();
 
