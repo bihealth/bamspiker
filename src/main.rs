@@ -734,7 +734,7 @@ fn second_pass(
             bar.set_position(record.pos().try_into().unwrap());
         }
     }
-    bar.finish_with_message(format!("{} 1st pass done", &target_name));
+    bar.finish_with_message(format!("{} 2nd pass done", &target_name));
 }
 
 /// Entry point after parsing command line and reading configuration.

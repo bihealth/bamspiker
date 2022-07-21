@@ -36,3 +36,9 @@ $ samtools tview -p chrom:1000 out-reads.bam tests/minimal/ref.fa
 
 - SNVs and deletion SVs only at the moment
 - Variants must not overlap (no sanity check at the moment)
+
+## Dependencies
+
+```
+$ mamba create -y -n bamspiker cmake openssl
+```
