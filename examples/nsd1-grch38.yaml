@@ -1,14 +1,13 @@
-small_vars:
-  - chromosome: chr5
+var_specs:
+  - var_type: Snv
+    chromosome: chr5
     start: 177209663
     end: 177209663
     reference: G
     alternative: T
     aaf: 0.5
-
-svs:
-  - sv_type: Deletion
-    chromosome: 5
+  - var_type: Deletion
+    chromosome: chr5
     start: 176643106
     end: 176646524
     aaf: 0.5

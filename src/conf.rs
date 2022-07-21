@@ -37,7 +37,7 @@ pub struct VarSpecs {
     pub var_specs: Vec<VarSpec>,
 }
 
-/// Overall configuration of espike
+/// Overall configuration of bamspiker
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// Path to the FAI indexed FASTA reference file

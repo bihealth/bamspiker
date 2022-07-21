@@ -1,5 +1,10 @@
-# espike
-Spike variants into BAM files (without all the hassle)
+# bamspiker
+
+Spike variants into BAM files (with limited functionality but without any hassle).
+
+## Dependencies:
+
+- `samtools` must be in your path
 
 ## Running SNV Example
 

@@ -1,4 +1,4 @@
-/// Main module for espike app
+/// Main module for bamspiker app
 ///
 /// Responsible for parsing command line parameters and global setup/cleanup.
 mod conf;
@@ -623,12 +623,26 @@ fn first_pass(
 fn second_pass(
     _config: &Config,
     tid: u32,
-    _target_len: u64,
+    target_len: u64,
     bam_in: &mut bam::IndexedReader,
     bam_out: &mut Writer,
     _rng: &mut StdRng,
     tmp_dir: &TempDir,
 ) {
+    let target_name =
+        String::from_utf8_lossy(bam_in.header().target_names()[tid as usize]).into_owned();
+
+    let bar = ProgressBar::new(target_len);
+    bar.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{msg} | {wide_bar:.cyan/blue} {pos:>7}/{len:7} [{elapsed_precise}/{eta_precise}]",
+            )
+            .progress_chars("##-"),
+    );
+    bar.set_message(format!("{} 2nd pass", &target_name));
+    bar.set_position(0);
+
     bam_in
         .fetch(tid)
         .expect("could not fetch whole contig from BAM");
@@ -667,6 +681,7 @@ fn second_pass(
     // Stream over contig suppress deny-listed records, write mutated ones
     let mut prev_pos = -1i64;
     let mut record = Record::new();
+    let mut record_no = 0;
     while let Some(r) = bam_in.read(&mut record) {
         r.expect("Failed to parse record");
 
@@ -714,7 +729,12 @@ fn second_pass(
         }
 
         prev_pos = record.pos();
+        record_no += 1;
+        if record_no % 10_000 == 0 {
+            bar.set_position(record.pos().try_into().unwrap());
+        }
     }
+    bar.finish_with_message(format!("{} 1st pass done", &target_name));
 }
 
 /// Entry point after parsing command line and reading configuration.
@@ -741,7 +761,7 @@ fn run(config: &Config) {
         let target_name = String::from_utf8_lossy(target_name).into_owned();
         let target_len = header_view.target_len(tid).expect("Invalid target");
 
-        let tmp_dir = TempDir::new("espike").expect("could not create temporary directory");
+        let tmp_dir = TempDir::new("bamspiker").expect("could not create temporary directory");
 
         // Perform first pass over contig and collect reads that need modification
         first_pass(
@@ -803,7 +823,7 @@ fn main() {
         var_specs: load_var_specs(&args.path_instructions).var_specs,
         seed: args.seed,
     };
-    println!("Running 'espike' - your friendly BAM spiker.");
+    println!("Running 'bamspiker'...");
     println!("Configuration is {:?}", config);
     run(&config);
     println!("All done. Have a nice day!");
