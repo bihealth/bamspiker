@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read};
 
 /// Define type for a structural variant
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum VarType {
     /// A single nucleotide variant
     Snv,

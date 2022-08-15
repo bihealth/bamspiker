@@ -50,7 +50,10 @@ struct Cli {
 }
 
 /// Spike SNV into record
-fn spike_into_record_snv(record: &mut Record, rng: &mut StdRng, spec: &VarSpec) {
+///
+/// This function will only be called AFTER deciding POSITIVELY that the read
+/// should get a variant spikein in.
+fn spike_into_record_snv(record: &mut Record, spec: &VarSpec) {
     let cigar = record.cigar_cached().unwrap();
     let read_start_pos = cigar
         .read_pos((spec.start - 1).try_into().unwrap(), true, false)
@@ -60,11 +63,6 @@ fn spike_into_record_snv(record: &mut Record, rng: &mut StdRng, spec: &VarSpec) 
     let read_end_pos = cigar
         .read_pos((spec.end - 1).try_into().unwrap(), true, false)
         .unwrap();
-
-    let y: f64 = rng.gen();
-    if y >= spec.aaf {
-        return;
-    }
 
     if let (Some(start_pos), Some(end_pos_shifted)) = (read_start_pos, read_end_pos) {
         if start_pos != end_pos_shifted {
@@ -123,7 +121,7 @@ fn collect_reads_snv(
             }
 
             // Spike SNV into record
-            spike_into_record_snv(&mut record, rng, spec);
+            spike_into_record_snv(&mut record, spec);
 
             // Write modified record to SAM file
             changed_writer
@@ -487,7 +485,7 @@ fn apply_specs(
 ) {
     // sequence
     let mut seq: Vec<u8> = Vec::new();
-    let mut buf = Vec::new();
+    let mut buf = vec![1; 0]; // to make clippy's read_zero_byte_vec happy
     if spec.0 .1 > spec.0 .0 {
         fasta
             .fetch(
@@ -587,6 +585,7 @@ fn first_pass(
             .template(
                 "{msg} | {wide_bar:.cyan/blue} {pos:>7}/{len:7} [{elapsed_precise}/{eta_precise}]",
             )
+            .unwrap()
             .progress_chars("##-"),
     );
     bar.set_message(format!("{} 1st pass", &target_name));
@@ -638,6 +637,7 @@ fn second_pass(
             .template(
                 "{msg} | {wide_bar:.cyan/blue} {pos:>7}/{len:7} [{elapsed_precise}/{eta_precise}]",
             )
+            .unwrap()
             .progress_chars("##-"),
     );
     bar.set_message(format!("{} 2nd pass", &target_name));
